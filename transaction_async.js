@@ -1,15 +1,22 @@
-const keys = require('./keys.js')
 const Tx = require('ethereumjs-tx').Transaction
 
 const Web3 = require('web3')
 
-const web3 = new Web3(keys.web3Infura);
+require('dotenv').config()
+envOwnerAddress = process.env.OWNER_ADDRESS
+envOwnerPrivateKey = process.env.OWNER_PRIVATE_KEY
+envInfuraKey = process.env.INFURA_KEY
+envContractAddress = process.env.CONTRACT_ADDRESS
+envAccount2 = process.env.account2
+envPrivateKeyAccount2 = process.env.privateKeyAccount2
 
-const account1 = keys.account1; // this is the address of account 1 - this guy has all the MONEH
-const account2 = keys.account2; // this is the address of account 2 - this guy has very little MONEH
+const web3 = new Web3("https://ropsten.infura.io/v3/" + envInfuraKey);
 
-const privateKey1 = Buffer.from(keys.privateKey1, 'hex');
-const privateKey2 = Buffer.from(keys.privateKey2, 'hex');
+const account1 = envOwnerAddress; // this is the address of account 1 - this guy has all the MONEH
+const account2 = envAccount2; // this is the address of account 2 - this guy has very little MONEH
+
+const privateKey1 = Buffer.from(envOwnerPrivateKey, 'hex');
+const privateKey2 = Buffer.from(envPrivateKeyAccount2, 'hex');
 
 // secp256k1 (elliptic curve - 256bits)
 // metamask seed phrase (12 words) - > BIP -> create 128bits of randomness
@@ -56,21 +63,3 @@ const transfer = async() => {
 }
 
 transfer()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

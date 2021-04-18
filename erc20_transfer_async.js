@@ -1,4 +1,5 @@
-const Web3 = require("web3")
+const Tx = require('ethereumjs-tx').Transaction
+const Web3 = require('web3')
 
 require('dotenv').config()
 envOwnerAddress = process.env.OWNER_ADDRESS
@@ -6,11 +7,22 @@ envOwnerPrivateKey = process.env.OWNER_PRIVATE_KEY
 envInfuraKey = process.env.INFURA_KEY
 envContractAddress = process.env.CONTRACT_ADDRESS
 
-const rpcURL = "https://ropsten.infura.io/v3/"+ envInfuraKey
+const web3 = new Web3("https://ropsten.infura.io/v3/" + envInfuraKey)
 
-const web3 = new Web3(rpcURL)
+const account1 = envOwnerAddress  // this is the address of account 1 - this guy has all the MONEH
+const privateKey1 = Buffer.from(envOwnerPrivateKey, 'hex')
 
-const abi= [
+const account2 = process.env.account2 // this is the address of account 2 - this guy has very little MONEH
+//0x9EfEBD4E11813298b813e09338528CA895ef4726
+
+//secp256k1 (elliptic curve - 256bits)
+//metamask seed phrase (12 words) - > BIP -> create 128bits of randomness
+// passworrd is local only, used to encrypt the seed phrase
+// derivation path: m/44’/60’/0’/0/1 -> make the same public/private keypair
+// public key -> hashed/chopped -> eth address
+
+const contractAddress = envContractAddress
+const contractABI = [
 	{
 		"inputs": [],
 		"stateMutability": "nonpayable",
@@ -266,65 +278,98 @@ const abi= [
 	}
 ]
 
-// this is your contract address
-const address = envContractAddress 
+const contract = new web3.eth.Contract(contractABI, contractAddress)
 
-// this is the contract owner (who deployed the contract)
-const owner = envOwnerAddress
 
-const contract = new web3.eth.Contract(abi, address)
+const sendTransaction = async(raw) => {
+  return await web3.eth.sendSignedTransaction(raw)
+}
+
+const transferFunds = async(account2, amount) => {
+
+  // the nonce - what is it?
+  // the nonce is the transaction counter from a particular address
+  
+  let txCount = await web3.eth.getTransactionCount(account1)
+
+  console.log("txCount returned: " + txCount)
+
+  const txObject = {
+    nonce: web3.utils.toHex(txCount),
+    gasLimit: web3.utils.toHex(500000),
+    gasPrice: web3.utils.toHex(web3.utils.toWei('100', 'gwei')),
+    to: contractAddress,
+    data: contract.methods.transfer(account2, amount).encodeABI()
+  }
+
+  const tx = new Tx(txObject, {chain:'ropsten', hardfork:'petersburg'})
+  tx.sign(privateKey1)
+
+  const serializedTx = tx.serialize()
+  const raw = '0x' + serializedTx.toString('hex')
+  let txHash = await sendTransaction(raw)
+  console.log('original object: ' + txHash)
+  //console.log("err: " + txHash.err)
+  console.log("transaction hash: " + txHash.transactionHash)
+  console.log("transaction in block " + txHash.blockNumber)
+}
+
+const getBalanceOf = async(account) => {
+  let balanceOf = await contract.methods.balanceOf(account).call()
+  return balanceOf
+}
 
 const getSymbol = async() => {
- let symbol = await contract.methods.symbol().call()
-return symbol
+  let symbol = await contract.methods.symbol().call()
+  return symbol
 }
 
-const getName = async()=> {
-  let name = await contract.methods.name().call()
-  return name
-}
-
-const getDecimals = async() => {
-  let decimals = await contract.methods.decimals().call()
-  return decimals
-}
-
-const getBalanceOf = async(owner) => {
-  let balanceOf = await contract.methods.balanceOf(owner).call()
-  return balanceOf
-}
-
-const getOwnerBalance = async() => {
-  let balanceOf = await contract.methods.balanceOf(owner).call()
-  return balanceOf
-}
-
-const getBalance = async(contractAddress, account) => {
-// set up the contract object using the contract address
-// take the account and call the balance method
-const contract = new web3.eth.Contract(abi, contractAddress)
-let balanceOf = await contract.methods.balanceOf(account).call()
-return balanceOf
-} 
-
-const getTotalSupply = async() =>  {
+const getTotalSupply = async() => {
   let totalSupply = await contract.methods.totalSupply().call()
   return totalSupply
 }
 
-const returnValues = async() => {
-  let symbol = await getSymbol()
-  console.log('symbol is: ' + symbol)
-  console.log(`symbol is %s`, symbol)
-  console.log('name is: ' + await getName())
-  console.log('decimals is: ' + await getDecimals())
-  console.log('balance of ' + owner + ' is: ' + await getBalanceOf(owner))
-  console.log(`total supply of %s is %s`, symbol, await getTotalSupply())
+const transfer = async() => {
+  account1bal = await getBalanceOf(account1)
+  console.log("account 1 balance is: " + account1bal)
+
+  symbol = await getSymbol()
+  console.log('symbol of erc20 contract is: ' + symbol)
+
+  supply = await getTotalSupply()
+  console.log('total supply of ' + symbol + " is: " + supply )
+  await getBalanceOf(account2)
+
+  await transferFunds(account2, '50000000000000000000')
 }
 
-module.exports = { getBalance }
-//returnValues()
+const transferFromOwner = async(contractAddress, toAccount, amount) => {
 
+  // get an instance of the contract
+  const contract = new web3.eth.Contract(contractABI, contractAddress)
 
+  // run a transfer from owner to account of amount
+  let txCount = await web3.eth.getTransactionCount(account1)
 
+  console.log(`nonce for owner account (${account1}) is: ${txCount}`)
 
+  const txObject = {
+    nonce: web3.utils.toHex(txCount),
+    gasLimit: web3.utils.toHex(500000),
+    gasPrice: web3.utils.toHex(web3.utils.toWei('100', 'gwei')),
+    to: contractAddress,
+    data: contract.methods.transfer(toAccount, amount).encodeABI()
+  }
+
+  const tx = new Tx(txObject, {chain:'ropsten', hardfork:'petersburg'})
+  tx.sign(privateKey1)
+
+  const serializedTx = tx.serialize()
+  const raw = '0x' + serializedTx.toString('hex')
+  let txHash = await sendTransaction(raw)
+  return `transaction ${txHash.transactionHash} mined in block ${txHash.blockNumber}`
+}
+
+//transfer()
+
+module.exports = { getSymbol, getTotalSupply, transfer, transferFromOwner }
