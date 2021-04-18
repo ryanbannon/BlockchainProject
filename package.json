@@ -1,7 +1,7 @@
 {
-  "name": "nci2021",
+  "name": "BlockchainProject",
   "version": "1.0.0",
-  "description": "hey, this is the readme.md file",
+  "description": "readme.md file",
   "main": "handlers.js",
   "dependencies": {
     "big-number": "^2.0.0",
@@ -18,12 +18,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/eoinco/nci2021.git"
+    "url": "git+https://github.com/ryanbannon/BlockchainProject.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/eoinco/nci2021/issues"
+    "url": "https://github.com/ryanbannon/BlockchainProject/issues"
   },
-  "homepage": "https://github.com/eoinco/nci2021#readme"
+  "homepage": "https://github.com/ryanbannon/BlockchainProject#readme"
 }
